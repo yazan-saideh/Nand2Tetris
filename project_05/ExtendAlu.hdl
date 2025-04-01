@@ -1,0 +1,48 @@
+// This file is part of nand2tetris, as taught in The Hebrew University, and
+// was written by Aviv Yaish. It is an extension to the specifications given
+// [here](https://www.nand2tetris.org) (Shimon Schocken and Noam Nisan, 2017),
+// as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
+// Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
+
+
+// The ExtendAlu chip is an extension of the standard ALU which also supports
+// shift operations.
+// The inputs of the extended ALU are instruction[9], x[16], y[16].
+// The "ng" and "zr" output pins behave the same as in the regular ALU.
+// The "out" output is defined as follows:
+// If instruction[8]=1 and instruction[7]=1 the output is identical to the 
+// regular ALU, where:
+// instruction[5]=zx, instruction[4]=nx, ..., instruction[0]=no
+// Else, if instruction[8]=0 and instruction[7]=1, the output is a shift:
+// - If instruction[4] == 0, the input "y" will be shifted, otherwise "x".
+// - If instruction[5] == 0, the shift will be a right-shift, otherwise left.
+// - All other inputs are undefined.
+
+CHIP ExtendAlu {
+     IN x[16], y[16], instruction[9];
+     OUT out[16], zr, ng;
+     
+     PARTS:
+	//normal ALU operations and definition
+	ALU(x=x , y=y , zx=instruction[5] , nx=instruction[4] , zy=instruction[3] ,
+     ny=instruction[2] , f=instruction[1], no=instruction[0] , out=ALUout , zr=ALUzr , ng=ALUng );
+
+	//shift values for x and y
+     ShiftRight(in=y,out=Ry);
+     ShiftLeft(in=y,out =Ly);
+     ShiftRight(in=x,out=Rx);
+     ShiftLeft(in=x,out =Lx);
+
+	//the shift value output depending on instruction 4th and 5th bits.
+     Mux4Way16(a=Ry,b=Rx,c=Ly,d=Lx,sel=instruction[4..5],out=shiftout);
+	//the  output depending on instruction 7th and 8th bits.
+	// (MSB bit decides value of ng) 
+	// divide output to buses to figure out whether if output==0 
+     Mux4Way16(a=false,b=shiftout,c=false,d=ALUout,sel=instruction[7..8],out=out, out[0..7]=or1, out[8..15]=or2,out[15]=ng);
+	//check if all bits are 0 to determine if out==0
+	Or8Way(in=or1, out=orout1);
+     Or8Way(in=or2, in[7]=false, out=orout2);
+     Or(a=orout1, b=orout2, out=orout3);
+     Not(in=orout3, out=zr);
+     
+}
