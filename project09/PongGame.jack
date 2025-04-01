@@ -1,0 +1,641 @@
+class PongGame {
+
+    // Screen dimensions
+    field int screenWidth;
+    field int screenHeight;
+
+    // Ball variables
+    field int ballX;
+    field int ballY;
+    field int ballDX;
+    field int ballDY;
+    field int ballRadius;
+    
+    // Paddle variables
+    field int paddleWidth;
+    field int paddleHeight;
+    field int leftPaddleY;
+    field int rightPaddleY;
+    field int paddleSpeed;
+
+    // Scores
+    field int leftScore;
+    field int rightScore;
+
+    field boolean finished;
+    field int chosen_difficulty;
+    constructor PongGame Pong() {
+        // Initialize screen dimensions
+        let screenWidth = 512;
+        let screenHeight = 256;
+        // Initialize ball position and speed
+        let ballX = (screenWidth / 2);
+        let ballY = (screenHeight / 2);
+        let ballDX = 4;
+        let ballDY = 4;
+        let ballRadius = 5;
+
+        // Initialize paddle dimensions and positions
+        let paddleWidth = 10;
+        let paddleHeight = 40;
+        let leftPaddleY = (screenHeight - paddleHeight) / 2;
+        let rightPaddleY = (screenHeight - paddleHeight) / 2;
+        let paddleSpeed = 4;
+
+        // Initialize scores
+        let leftScore = 0;
+        let rightScore = 0;
+
+        let chosen_difficulty = 0;
+        let finished = false;
+        return this;
+    }
+
+    method void run() {
+        var boolean done;
+        var boolean is_single;
+        var boolean choose_mode;
+        var int key;
+        var boolean menu_drawn;
+        var boolean dif_drawn;
+        let menu_drawn = false;
+        let dif_drawn = false;
+        let choose_mode = false;
+        let done = false;
+        let is_single = false;
+        while (~done) { 
+            if(~choose_mode){
+                if (~menu_drawn) {
+                do draw_main_menu(); // Draw the menu only once
+                do Output.moveCursor(17, 3);
+                do Output.printString("Note:");
+                do Output.moveCursor(18, 3);
+                do Output.printString("To control the player on the left side:");
+                do Output.moveCursor(19, 3);
+                do Output.printString("Press (Q) to move up or (A) to move down.");
+                do Output.moveCursor(20, 3);
+                do Output.printString("To control the player on the right side:");
+                do Output.moveCursor(21, 3);
+                do Output.printString("Press (up arrow) to move up or (down arrow) to move down.");
+                let menu_drawn = true; // Mark the menu as drawn
+                }
+                let key = Keyboard.keyPressed();  // Get the currently pressed key
+                // Left paddle movement
+                if (key = 49) { // 'Q' key
+                    let choose_mode = true;
+                    let is_single = true;
+                    
+                }
+                if (key = 50) { // 'A' key
+                    let choose_mode = true;
+                    let is_single = false;
+                    
+                }
+                do Sys.wait(70);
+            }
+            if((choose_mode) & (is_single)){
+                if(chosen_difficulty = 0){
+                    if (~dif_drawn) {
+                    do draw_difficulty();
+                    do Output.moveCursor(1, 21);
+                    do Output.printString("choose difficulty");
+                    let dif_drawn = true;
+                    }  
+                    let key = Keyboard.keyPressed();
+                    let chosen_difficulty = choose_difficulty(key);
+                    do Sys.wait(70);
+                }
+                if(~(chosen_difficulty = 0)){
+                    do drawScreen();
+                    do singleplayer_Input();
+                    do singleplayer_AI(chosen_difficulty);
+                    do updateBall();
+                    do checkCollisions();
+                    let done = is_finished();
+                    do Sys.wait(16);
+                }
+            }
+            if((choose_mode) & (~is_single)){
+                do drawScreen();
+                do Twoplayer_Input();
+                do updateBall();
+                do checkCollisions();
+                let done = is_finished();
+                do Sys.wait(16);
+                
+            }
+        }
+        do Sys.wait(2000);
+        return;
+    }
+    method int choose_difficulty(int key){
+        if(key = 49){
+            return 1;
+        }
+        if(key = 50){
+            return 2;
+        }
+        if(key = 51){
+            return 3;
+        }
+        return 0;
+    }
+    method void draw_main_menu(){
+        do Screen.clearScreen();
+        do draw_pong_game();    
+        do draw_player();
+        do draw_1();
+        do draw_2();
+        return;
+    }
+    method void draw_player(){
+            do Draw.drawone(3908);
+            do Draw.drawletterP(3910);
+            do Draw.drawletterL(3911);
+            do Draw.drawletterA(3912);
+            do Draw.drawletterY(3913);
+            do Draw.drawletterE(3914);
+            do Draw.drawletterR(3915);
+            do Draw.drawtwo(3924);
+            do Draw.drawletterP(3926);
+            do Draw.drawletterL(3927);
+            do Draw.drawletterA(3928);
+            do Draw.drawletterY(3929);
+            do Draw.drawletterE(3930);
+            do Draw.drawletterR(3931);
+            do Draw.drawletterS(3932);
+            return;       
+    }
+    method void draw_1(){
+        do Draw.draw_brac2(4903);
+        do Draw.drawone(4904);
+        do Draw.draw_brac1(4905);
+        return;
+    }
+    method void draw_2(){
+        do Draw.draw_brac2(4919);
+        do Draw.drawtwo(4920);
+        do Draw.draw_brac1(4921);
+        return;
+    }
+    method void drawScreen() {
+        var int i;
+        do Screen.clearScreen();
+
+        // Draw ball
+        do Screen.setColor(true);
+        do Screen.drawCircle(ballX, ballY, ballRadius);
+
+        // Draw left paddle
+        do Screen.drawRectangle(10, leftPaddleY, 10 + paddleWidth, leftPaddleY + paddleHeight);
+
+        // Draw right paddle
+        do Screen.drawRectangle(screenWidth - 10 - paddleWidth, rightPaddleY, screenWidth - 10, rightPaddleY + paddleHeight);
+        let i = 0;
+        while (i < screenHeight) {
+            do Screen.drawRectangle((screenWidth / 2) - 1, i, (screenWidth / 2) + 1, i + 10); // Draw a stripe
+            let i = i + 20; // Leave a gap of 10 pixels
+        }
+        do scoreboard();
+        return;
+    }
+    method void singleplayer_Input(){
+        var int key;
+        let key = Keyboard.keyPressed();  // Get the currently pressed key
+
+        // Left paddle movement
+        if (key = 81) { // 'Q' key
+            if (leftPaddleY > 0) { // Ensure paddle stays within the top boundary
+                let leftPaddleY = leftPaddleY - paddleSpeed;
+            }
+        }
+        if (key = 65) { // 'A' key
+            if (leftPaddleY + paddleHeight < screenHeight) { // Ensure paddle stays within the bottom boundary
+                let leftPaddleY = leftPaddleY + paddleSpeed;
+            }
+        }
+        return;
+    }
+    method void Twoplayer_Input() {
+        var int key;
+        let key = Keyboard.keyPressed();  // Get the currently pressed key
+
+        // Left paddle movement
+        if (key = 81) { // 'Q' key
+            if (leftPaddleY > 0) { // Ensure paddle stays within the top boundary
+                let leftPaddleY = leftPaddleY - paddleSpeed;
+            }
+        }
+        if (key = 65) { // 'A' key
+            if (leftPaddleY + paddleHeight < screenHeight) { // Ensure paddle stays within the bottom boundary
+                let leftPaddleY = leftPaddleY + paddleSpeed;
+            }
+        }
+
+        if (key = 131) { // Up arrow key
+            if (rightPaddleY > 0) { // Ensure paddle stays within the top boundary
+                let rightPaddleY = rightPaddleY - paddleSpeed;
+            }
+        }
+        if (key = 133) { // Down arrow key
+            if (rightPaddleY + paddleHeight < screenHeight) { // Ensure paddle stays within the bottom boundary
+                let rightPaddleY = rightPaddleY + paddleSpeed;
+            }
+        }
+        return;
+    }
+    method void updateBall() {
+        let ballX = ballX + ballDX;
+        let ballY = ballY + ballDY;
+        return;
+    }
+
+    method void checkCollisions() {
+        // Ball hits left paddle
+        if ((ballX - ballRadius) < 20) {
+            if(ballY > leftPaddleY){
+                if(ballY < (leftPaddleY + paddleHeight)){
+                    let ballDX = ballDX - 2;
+                    if(ballDX < (-14)){
+                        let ballDX = (-14);
+                    }
+                    let ballDX = -ballDX;
+                    let ballDY = -ballDY;
+                }
+            }
+        }
+        // Ball hits right paddle
+        if ((ballX + ballRadius) > (screenWidth - 10 - paddleWidth)){
+            if(ballY > rightPaddleY){
+                if(ballY < (rightPaddleY + paddleHeight)){
+                    let ballDX = ballDX + 2;
+                    if(ballDX > 14){
+                        let ballDX = 14;
+                    }
+                    let ballDX = -ballDX;
+                }
+            }
+        }
+        // Ball goes out of bounds
+        if (ballX - ballRadius < 0) {
+            let rightScore = rightScore + 1;
+            do resetBall();  // Resetting the ball
+        } 
+        if (ballX + ballRadius > screenWidth) {
+            let leftScore = leftScore + 1;
+            do resetBall();  // Resetting the ball
+        }
+        if ((ballY + ballRadius > screenHeight) | (ballY + ballRadius = screenHeight))  {
+            if(ballDX < 0){
+                let ballDX = ballDX + 1;
+                if(ballDX = 0){
+                    let ballDX = -1;
+                }
+            }
+            if(ballDX > 0){
+                let ballDX = ballDX - 1;
+                if(ballDX = 0){
+                    let ballDX = 1;
+                }
+            }
+            if(ballDY < 0){
+                let ballDY = ballDY + 1;
+                if(ballDY = 0){
+                    let ballDY = -1;
+                }
+            }
+            if(ballDY > 0){
+                let ballDY = ballDY - 1;
+                if(ballDY = 0){
+                    let ballDY = 1;
+                }
+            }
+            let ballY = screenHeight - (2*ballRadius);
+            let ballDY = -ballDY; 
+
+        }
+        if ((ballY - ballRadius < 0) | (ballY - ballRadius = 0))  {
+            if(ballDX < 0){
+                let ballDX = ballDX + 1;
+                if(ballDX = 0){
+                    let ballDX = -1;
+                }
+            }
+            if(ballDX > 0){
+                let ballDX = ballDX - 1;
+                if(ballDX = 0){
+                    let ballDX = 1;
+                }
+            }
+            if(ballDY < 0){
+                let ballDY = ballDY + 1;
+                if(ballDY = 0){
+                    let ballDY = -1;
+                }
+            }
+            if(ballDY > 0){
+                let ballDY = ballDY - 1;
+                if(ballDY = 0){
+                    let ballDY = 1;
+                }
+            }
+            let ballY = (2*ballRadius);
+            let ballDY = -ballDY;
+        }
+        if((leftPaddleY < 0) | (leftPaddleY = 0))
+        {
+            let leftPaddleY = 1;
+        }
+        if((rightPaddleY < 0) | (rightPaddleY = 0))
+        {
+            let rightPaddleY = 1;
+        }
+        if(((leftPaddleY + paddleHeight) > screenHeight) | ((leftPaddleY + paddleHeight) = screenHeight))
+        {
+            let leftPaddleY = screenHeight - 41;
+        }
+        if(((rightPaddleY + paddleHeight) > screenHeight) | ((rightPaddleY + paddleHeight) = screenHeight))
+        {
+            let rightPaddleY = screenHeight - 41;
+        }
+        return;
+    }
+    method void resetBall() {
+        let ballX = screenWidth / 2;
+        let ballY = screenHeight / 2;
+        let ballDX = 4;
+        let ballDY = 4;
+        let ballDX = -ballDX;
+        return;
+    }
+    method void scoreboard(){
+        if (leftScore = 0){
+            do Draw.drawzero(488);
+        }
+        if (leftScore = 1){
+            do Draw.drawone(488);
+        }
+        if (leftScore = 2){
+            do Draw.drawtwo(488);
+        }
+        if (leftScore = 3){
+            do Draw.drawthree(488);
+        }
+        if (leftScore = 4){
+            do Draw.drawfour(488);
+        }
+        if (leftScore = 5){
+            do Draw.drawfive(488);
+        }
+        if (leftScore = 6){
+            do Draw.drawsix(488);
+        }
+        if (leftScore = 7){
+            do Draw.drawseven(488);
+        }
+        if (leftScore = 8){
+            do Draw.draweight(488);
+        }
+        if (leftScore = 9){
+            do Draw.drawnine(488);
+        }
+        if (rightScore = 0){
+            do Draw.drawzero(504);
+        }
+        if (rightScore = 1){
+            do Draw.drawone(504);
+        }
+        if (rightScore = 2){
+            do Draw.drawtwo(504);
+        }
+        if (rightScore = 3){
+            do Draw.drawthree(504);
+        }
+        if (rightScore = 4){
+            do Draw.drawfour(504);
+        }
+        if (rightScore = 5){
+            do Draw.drawfive(504);
+        }
+        if (rightScore = 6){
+            do Draw.drawsix(504);
+        }
+        if (rightScore = 7){
+            do Draw.drawseven(504);
+        }
+        if (rightScore = 8){
+            do Draw.draweight(504);
+        }
+        if (rightScore = 9){
+            do Draw.drawnine(504);
+        }
+        return;
+    }
+    method void drawWinner(){
+        do Screen.setColor(true);
+        if(rightScore = 10){
+            do Draw.drawletterP(906);
+            do Draw.drawletterL(907);
+            do Draw.drawletterA(908);
+            do Draw.drawletterY(909);
+            do Draw.drawletterE(910);
+            do Draw.drawletterR(911);
+            do Draw.drawtwo(912);
+            do Draw.drawletterW(914);
+            do Draw.drawletterI(915);
+            do Draw.drawletterN(916);
+            do Draw.drawexclamationmark(917);
+
+        }
+        if(leftScore = 10){
+            do Draw.drawletterP(906);
+            do Draw.drawletterL(907);
+            do Draw.drawletterA(908);
+            do Draw.drawletterY(909);
+            do Draw.drawletterE(910);
+            do Draw.drawletterR(911);
+            do Draw.drawone(912);
+            do Draw.drawletterW(914);
+            do Draw.drawletterI(915);
+            do Draw.drawletterN(916);
+            do Draw.drawexclamationmark(917);
+        }
+        return;
+    }
+    
+    method boolean is_finished(){
+        if(rightScore = 10) {
+            do drawWinner();
+            return true;
+        }
+        if (leftScore = 10){
+            do drawWinner();
+            return true;
+        }
+        return false;
+    }
+    method int mod(int a, int b){
+        return a - (Math.multiply(Math.divide(a,b),b));
+    }
+    method void singleplayer_AI(int difficulty) {
+        var int targetY;  // Predicted y-position where the ball will reach the AI paddle
+        var int aiSpeed;
+        var int marginError;
+        var Array difficulty2;
+
+        // Allocate memory for the array
+        let difficulty2 = Array.new(3);
+
+        // Initialize the array
+        let difficulty2[0] = 1; // Easy
+        let difficulty2[1] = 2; // Medium
+        let difficulty2[2] = 3; // Hard
+
+        // Adjust speed based on difficulty
+        if (difficulty = difficulty2[0]) { // Easy
+            let aiSpeed = paddleSpeed / 4;
+            let marginError = mod(ballY, 61) - 30;
+        } 
+        if (difficulty = difficulty2[1]) { // Medium
+            let aiSpeed = paddleSpeed / 2;
+            let marginError = (mod(ballY, 31) - 15) / 2;
+        } 
+        if (difficulty = difficulty2[2]) { // Hard
+            let aiSpeed = paddleSpeed + 2;
+            let marginError = 1;
+        }
+        
+        // Predict the ball's y-coordinate when it reaches the AI paddle's x-coordinate
+        if (ballDX > 0) { // Only predict if the ball is moving towards the AI
+            let targetY = predictBallY() + marginError;
+        }
+        if(ballDX < 0)
+        {
+            let targetY = (screenHeight / 2); // Default to center when the ball is moving away
+        }
+        // Move AI paddle toward the predicted y-coordinate
+        if ((rightPaddleY + (paddleHeight / 2)) < targetY) {
+            if ((rightPaddleY + paddleHeight) < screenHeight) {
+                let rightPaddleY = rightPaddleY + aiSpeed;
+            }
+        }
+        if ((rightPaddleY + (paddleHeight / 2)) > targetY) {
+            if (rightPaddleY > 0) {
+                let rightPaddleY = rightPaddleY - aiSpeed;
+            }
+        }
+        do difficulty2.dispose();
+        return;
+    }
+    method int predictBallY() {
+        var int predictedY;
+        var int timeToReach;
+
+        // Calculate the time it will take for the ball to reach the AI paddle
+        let timeToReach = (screenWidth - 20 - paddleWidth - ballX) / ballDX;
+
+        // Predict the y-coordinate based on current velocity
+        let predictedY = ballY + (ballDY * timeToReach);
+
+        // Handle ball bouncing off the top or bottom walls
+        while ((predictedY < 0) | (predictedY > screenHeight)) {
+            if (predictedY < 0) {
+                let predictedY = -predictedY; // Reflect off the top wall
+            }if (predictedY > screenHeight) {
+                let predictedY = (2 * screenHeight) - predictedY; // Reflect off the bottom wall
+            }
+        }
+
+        return predictedY;
+    }
+    method void draw_pong_game(){
+        do Screen.setColor(true);
+        do Draw.drawletterP(908);
+        do Draw.drawletterO(909);
+        do Draw.drawletterN(910);
+        do Draw.drawletterG(911);
+        do Draw.drawletterG(913);
+        do Draw.drawletterA(914);
+        do Draw.drawletterM(915);
+        do Draw.drawletterE(916);
+        return;
+    }
+
+    method void draw_difficulty(){
+        do Screen.clearScreen();
+        do Screen.setColor(true);
+        do Draw.drawletterI(907);
+        do Draw.drawletterF(908);
+        do Draw.drawletterD(906);
+        do Draw.drawletterF(909);
+        do Draw.drawletterI(910);
+        do Draw.drawletterC(911);
+        do Draw.drawletterU(912);
+        do Draw.drawletterL(913);
+        do Draw.drawletterT(914);
+        do Draw.drawletterY(915);
+        do Draw.draw_brac2(3531);
+        do Draw.drawone(3532);
+        do Draw.draw_brac1(3533);
+        do Draw.drawletterE(3534);
+        do Draw.drawletterA(3535);
+        do Draw.drawletterS(3536);
+        do Draw.drawletterY(3537);
+        do Draw.draw_brac2(4299);
+        do Draw.drawtwo(4300);
+        do Draw.draw_brac1(4301);
+        do Draw.drawletterM(4302);
+        do Draw.drawletterE(4303);
+        do Draw.drawletterD(4304);
+        do Draw.drawletterI(4305);
+        do Draw.drawletterU(4306);
+        do Draw.drawletterM(4307);
+        do Draw.draw_brac2(5067);
+        do Draw.drawthree(5068);
+        do Draw.draw_brac1(5069);
+        do Draw.drawletterH(5070);
+        do Draw.drawletterA(5071);
+        do Draw.drawletterR(5072);
+        do Draw.drawletterD(5073);
+        return;
+    }
+
+    method boolean is_restart(){
+      var int key;
+      let key = Keyboard.readChar();
+      if(key = 82){
+        return true;
+      }
+      return false;
+    }
+    method void draw_restart_end(){
+        var boolean restart_drawn;
+        let restart_drawn = false;
+        do Screen.clearScreen();
+        if(~restart_drawn){
+            do Draw.draw_brac2(3531);
+            do Draw.drawletterR(3532);
+            do Draw.draw_brac1(3533);
+            do Draw.drawletterR(3534);
+            do Draw.drawletterE(3535);
+            do Draw.drawletterS(3536);
+            do Draw.drawletterT(3537);
+            do Draw.drawletterA(3538);
+            do Draw.drawletterR(3539);
+            do Draw.drawletterT(3540);
+            do Draw.draw_brac2(4299);
+            do Draw.drawletterE(4300);
+            do Draw.draw_brac1(4301);
+            do Draw.drawletterE(4302);
+            do Draw.drawletterX(4303);
+            do Draw.drawletterI(4304);
+            do Draw.drawletterT(4305);
+            do Output.moveCursor(8, 20);
+            do Output.printString("do you want to restart ?");
+            let restart_drawn = true;
+        }
+        
+        return;
+    }
+    
+}

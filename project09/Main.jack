@@ -1,0 +1,31 @@
+// This file is part of nand2tetris, as taught in The Hebrew University, and
+// was written by Aviv Yaish. It is an extension to the specifications given
+// [here](https://www.nand2tetris.org) (Shimon Schocken and Noam Nisan, 2017),
+// as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
+// Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
+
+/**
+  * In Jack programs, the first function that runs is always the function "main"
+  * from the class "Main".
+  * You can include as many classes and functions as you want.
+  */
+class Main {
+    function void main() {
+      var PongGame game;
+      var boolean restart;
+      let restart = true;
+      while(restart){
+        if (~(game = null)) {
+            do Memory.deAlloc(game); // Deallocate the previous game instance
+          }
+        let game = PongGame.Pong();
+        do game.run();
+        do game.draw_restart_end();
+        let restart = game.is_restart();
+      }
+      return;
+    }
+
+}
+  // Your code goes here!
+
